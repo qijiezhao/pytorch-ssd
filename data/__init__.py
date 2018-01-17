@@ -1,4 +1,6 @@
 from .voc0712 import VOCDetection, AnnotationTransform, detection_collate, VOC_CLASSES
+from .kitti import KittiLoader, AnnotationTransform_kitti,Class_to_ind
+
 from .config import *
 import cv2
 import numpy as np

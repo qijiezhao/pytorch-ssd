@@ -16,7 +16,7 @@ import torch.utils.data as data
 
 from data import AnnotationTransform, VOCDetection, BaseTransform, VOC_CLASSES
 from ssd import build_ssd
-
+from log import log
 import sys
 import os
 import time
@@ -133,7 +133,7 @@ def get_voc_results_file_template(image_set, cls):
 
 def write_voc_results_file(all_boxes, dataset):
     for cls_ind, cls in enumerate(labelmap):
-        print('Writing {:s} VOC results file'.format(cls))
+        log.l.info('Writing {:s} VOC results file'.format(cls))
         filename = get_voc_results_file_template(set_type, cls)
         with open(filename, 'wt') as f:
             for im_ind, index in enumerate(dataset.ids):
@@ -153,7 +153,7 @@ def do_python_eval(output_dir='output', use_07=True):
     aps = []
     # The PASCAL VOC metric changed in 2010
     use_07_metric = use_07
-    print('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
+    log.l.info('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
     for i, cls in enumerate(labelmap):
@@ -162,21 +162,21 @@ def do_python_eval(output_dir='output', use_07=True):
            filename, annopath, imgsetpath.format(set_type), cls, cachedir,
            ovthresh=0.5, use_07_metric=use_07_metric)
         aps += [ap]
-        print('AP for {} = {:.4f}'.format(cls, ap))
+        log.l.info('AP for {} = {:.4f}'.format(cls, ap))
         with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
             pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
-    print('Mean AP = {:.4f}'.format(np.mean(aps)))
-    print('~~~~~~~~')
-    print('Results:')
+    log.l.info('Mean AP = {:.4f}'.format(np.mean(aps)))
+    log.l.info('~~~~~~~~')
+    log.l.info('Results:')
     for ap in aps:
-        print('{:.3f}'.format(ap))
-    print('{:.3f}'.format(np.mean(aps)))
-    print('~~~~~~~~')
-    print('')
-    print('--------------------------------------------------------------')
-    print('Results computed with the **unofficial** Python eval code.')
-    print('Results should be very close to the official MATLAB eval code.')
-    print('--------------------------------------------------------------')
+        log.l.info('{:.3f}'.format(ap))
+    log.l.info('{:.3f}'.format(np.mean(aps)))
+    log.l.info('~~~~~~~~')
+    log.l.info('')
+    log.l.info('--------------------------------------------------------------')
+    log.l.info('Results computed with the **unofficial** Python eval code.')
+    log.l.info('Results should be very close to the official MATLAB eval code.')
+    log.l.info('--------------------------------------------------------------')
 
 
 def voc_ap(rec, prec, use_07_metric=True):
@@ -256,10 +256,10 @@ cachedir: Directory for caching the annotations
         for i, imagename in enumerate(imagenames):
             recs[imagename] = parse_rec(annopath % (imagename))
             if i % 100 == 0:
-                print('Reading annotation for {:d}/{:d}'.format(
+                log.l.info('Reading annotation for {:d}/{:d}'.format(
                    i + 1, len(imagenames)))
         # save
-        print('Saving cached annotations to {:s}'.format(cachefile))
+        log.l.info('Saving cached annotations to {:s}'.format(cachefile))
         with open(cachefile, 'wb') as f:
             pickle.dump(recs, f)
     else:
@@ -391,13 +391,13 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
                 .astype(np.float32, copy=False)
             all_boxes[j][i] = cls_dets
 
-        print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
+        log.l.info('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
                                                     num_images, detect_time))
 
     with open(det_file, 'wb') as f:
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
-    print('Evaluating detections')
+    log.l.info('Evaluating detections')
     evaluate_detections(all_boxes, output_dir, dataset)
 
 
@@ -412,7 +412,7 @@ if __name__ == '__main__':
     net = build_ssd('test', 512, num_classes) # initialize SSD
     net.load_state_dict(torch.load(args.trained_model))
     net.eval()
-    print('Finished loading model!')
+    log.l.info('Finished loading model!')
     # load data
     dataset = VOCDetection(args.voc_root, [('2007', set_type)], BaseTransform(512, dataset_mean), AnnotationTransform())
     if args.cuda:

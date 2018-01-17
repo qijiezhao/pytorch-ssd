@@ -35,7 +35,7 @@ def test_net(save_folder, net, cuda, testset, transform, thresh):
     filename = save_folder+'test1.txt'
     num_images = len(testset)
     for i in range(num_images):
-        print('Testing image {:d}/{:d}....'.format(i+1, num_images))
+        log.l.info('Testing image {:d}/{:d}....'.format(i+1, num_images))
         img = testset.pull_image(i)
         img_id, annotation = testset.pull_anno(i)
         x = torch.from_numpy(transform(img)[0]).permute(2, 0, 1)
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     net = build_ssd('test', 300, num_classes) # initialize SSD
     net.load_state_dict(torch.load(args.trained_model))
     net.eval()
-    print('Finished loading model!')
+    log.l.info('Finished loading model!')
     # load data
     testset = VOCDetection(args.voc_root, [('2007', 'test')], None, AnnotationTransform())
     if args.cuda:
