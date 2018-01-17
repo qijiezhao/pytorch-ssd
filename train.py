@@ -7,19 +7,24 @@ import torch.nn.init as init
 import argparse
 from torch.autograd import Variable
 import torch.utils.data as data
-from data import AnnotationTransform, VOCDetection, detection_collate, VOCroot, VOC_CLASSES
+from data import AnnotationTransform, VOCDetection, detection_collate, dataroot, VOC_CLASSES
+from data import KittiLoader, AnnotationTransform_kitti,Class_to_ind
+
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from ssd import build_ssd
 import numpy as np
 import time
 from IPython import embed
+from log import log
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
 parser = argparse.ArgumentParser(description='Single Shot MultiBox Detector Training')
 parser.add_argument('--dim', default=512, type=int, help='Size of the input image, only support 300 or 512')
+parser.add_argument('-d', '--dataset', default='VOC',help='VOC or COCO dataset')
+
 parser.add_argument('--basenet', default='vgg16_reducedfc.pth', help='pretrained base model')
 parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
 parser.add_argument('--batch_size', default=16, type=int, help='Batch size for training')
@@ -27,7 +32,7 @@ parser.add_argument('--resume', default=None, type=str, help='Resume from checkp
 parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
 parser.add_argument('--iterations', default=120000, type=int, help='Number of training iterations')
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
-parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='initial learning rate')
+parser.add_argument('--lr', '--learning-rate', default=3e-3, type=float, help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
 parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
@@ -35,7 +40,7 @@ parser.add_argument('--log_iters', default=True, type=bool, help='Print the loss
 parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
 parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
 parser.add_argument('--save_folder', default='weights/', help='Location to save checkpoint models')
-parser.add_argument('--voc_root', default=VOCroot, help='Location of VOC root directory')
+parser.add_argument('--data_root', default=dataroot, help='Location of VOC root directory')
 args = parser.parse_args()
 
 if args.cuda and torch.cuda.is_available():
@@ -52,7 +57,7 @@ means = (104, 117, 123)  # only support voc now
 num_classes = len(VOC_CLASSES) + 1
 accum_batch_size = 32
 iter_size = accum_batch_size / args.batch_size
-stepvalues = (80000, 100000, 120000)
+stepvalues = (60000, 80000, 100000)
 start_iter = 0
 
 if args.visdom:
@@ -67,12 +72,12 @@ if args.cuda:
     cudnn.benchmark = True
 
 if args.resume:
-    print('Resuming training, loading {}...'.format(args.resume))
+    log.l.info('Resuming training, loading {}...'.format(args.resume))
     ssd_net.load_weights(args.resume)
     start_iter = int(agrs.resume.split('/')[-1].split('.')[0].split('_')[-1])
 else:
     vgg_weights = torch.load(args.save_folder + args.basenet)
-    print('Loading base network...')
+    log.l.info('Loading base network...')
     ssd_net.vgg.load_state_dict(vgg_weights)
     start_iter = 0
 
@@ -91,7 +96,7 @@ def weights_init(m):
 
 
 if not args.resume:
-    print('Initializing weights...')
+    log.l.info('Initializing weights...')
     # initialize newly added layers' weights with xavier method
     ssd_net.extras.apply(weights_init)
     ssd_net.loc.apply(weights_init)
@@ -101,6 +106,18 @@ optimizer = optim.SGD(net.parameters(), lr=args.lr,
                       momentum=args.momentum, weight_decay=args.weight_decay)
 criterion = MultiBoxLoss(num_classes, args.dim, 0.5, True, 0, True, 3, 0.5, False, args.cuda)
 
+def DatasetSync(dataset='voc',split='training'):
+
+    
+    if dataset=='voc':
+        DataRoot=os.path.join(args.data_root,'VOCdevkit')
+        dataset = VOCDetection(DataRoot, train_sets, SSDAugmentation(
+        ssd_dim, means), AnnotationTransform())
+    elif dataset=='kitti':
+        DataRoot=os.path.join(args.data_root,'kitti')
+        dataset = KittiLoader(DataRoot, split=split,img_size=(1000,300),
+                  transforms=SSDAugmentation((1000,300),means),AnnotationTransform_kitti())
+    return dataset
 
 def train():
     net.train()
@@ -108,13 +125,15 @@ def train():
     loc_loss = 0  # epoch
     conf_loss = 0
     epoch = 0
-    print('Loading Dataset...')
+    log.l.info('Loading Dataset...')
 
-    dataset = VOCDetection(args.voc_root, train_sets, SSDAugmentation(
-        args.dim, means), AnnotationTransform())
+    # dataset = VOCDetection(args.voc_root, train_sets, SSDAugmentation(
+    #     args.dim, means), AnnotationTransform())
+    dataset=DatasetSync(dataset=args.dataset,split='training')
+    
 
     epoch_size = len(dataset) // args.batch_size
-    print('Training SSD on', dataset.name)
+    log.l.info('Training SSD on {}'.format(dataset.name))
     step_index = 0
     if args.visdom:
         # initialize visdom loss plot
@@ -141,13 +160,15 @@ def train():
     batch_iterator = None
     data_loader = data.DataLoader(dataset, args.batch_size, num_workers=args.num_workers,
                                   shuffle=True, collate_fn=detection_collate, pin_memory=True)
+    
+    lr=args.lr
     for iteration in range(start_iter, args.iterations + 1):
         if (not batch_iterator) or (iteration % epoch_size == 0):
             # create batch iterator
             batch_iterator = iter(data_loader)
         if iteration in stepvalues:
             step_index += 1
-            adjust_learning_rate(optimizer, args.gamma, step_index)
+            lr=adjust_learning_rate(optimizer, args.gamma, epoch, step_index, iteration, epoch_size)
             if args.visdom:
                 viz.line(
                     X=torch.ones((1, 3)).cpu() * epoch,
@@ -183,8 +204,9 @@ def train():
         loc_loss += loss_l.data[0]
         conf_loss += loss_c.data[0]
         if iteration % 10 == 0:
-            print('Timer: %.4f sec.' % (t1 - t0))
-            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data[0]), end=' ')
+            log.l.info('''
+                Timer: {} sec.\t LR: {}.\t Iter: {}.\t Loss_l: {}.\t Loss_c: {}.
+                '''.format((t1-t0),lr,iteration,loss_l.data[0],loss_c.data[0]))
             if args.visdom and args.send_images_to_visdom:
                 random_batch_index = np.random.randint(images.size(0))
                 viz.image(images.data[random_batch_index].cpu().numpy())
@@ -206,21 +228,24 @@ def train():
                     update=True
                 )
         if iteration % 5000 == 0:
-            print('Saving state, iter:', iteration)
+            log.l.info('Saving state, iter: {}'.format(iteration))
             torch.save(ssd_net.state_dict(), 'weights/ssd' + str(args.dim) + '_0712_' +
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(), args.save_folder + 'ssd_' + str(args.dim) + '.pth')
 
 
-def adjust_learning_rate(optimizer, gamma, step):
-    """Sets the learning rate to the initial LR decayed by 10 at every specified step
+def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_size):
+    """Sets the learning rate 
     # Adapted from PyTorch Imagenet example:
     # https://github.com/pytorch/examples/blob/master/imagenet/main.py
     """
-    lr = args.lr * (gamma ** (step))
+    if epoch < 6:
+        lr = 1e-6 + (args.lr-1e-6) * iteration / (epoch_size * 5) 
+    else:
+        lr = args.lr * (gamma ** (step_index))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
-
+    return lr
 
 if __name__ == '__main__':
     train()
