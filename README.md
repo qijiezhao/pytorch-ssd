@@ -1,6 +1,6 @@
 # pytorch-ssd
 
-by Sheng Tao, Qijie Zhao
+by Sheng Tao, Qijie Zhao. (VDIG，PKU)
 
 #### Reproduced the proposed results.
 
