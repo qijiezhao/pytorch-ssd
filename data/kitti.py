@@ -62,12 +62,12 @@ class AnnotationTransform_kitti(object):
             bnd_box=[xmin,ymin,xmax,ymax]
             new_bnd_box=list()
             for i,pt in enumerate(range(4)):
-                cur_pt=bnd_box[i]
+                cur_pt=float(bnd_box[i])
                 cur_pt = cur_pt / width if i % 2 == 0 else cur_pt / height
                 new_bnd_box.append(cur_pt)
             label_idx=self.class_to_ind(line.split(' ')[0])
             new_bnd_box.append(label_idx)
-            res.extend(new_bnd_box)
+            res.append(new_bnd_box)
         return res
 
 class KittiLoader(data.Dataset):
@@ -82,6 +82,7 @@ class KittiLoader(data.Dataset):
         self.files = collections.defaultdict(list)
         self.labels = collections.defaultdict(list)
         self.transforms = transforms
+        self.name='kitti'
 
         for split in ["training", "testing"]:
             file_list = glob(os.path.join(root, split, 'image_2', '*.png'))
@@ -117,7 +118,7 @@ class KittiLoader(data.Dataset):
 
         if self.transforms is not None:
             target = np.array(target)
-            img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])
+            img, boxes, labels = self.transforms(img, target[:, :4], target[:, 4])
             #img, lbl = self.transforms(img, lbl)
             img = img[:, :, (2, 1, 0)]
             target = np.hstack((boxes, np.expand_dims(labels, axis=1)))            
