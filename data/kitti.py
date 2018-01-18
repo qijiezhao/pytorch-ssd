@@ -50,7 +50,7 @@ class AnnotationTransform_kitti(object):
 
     levels=['easy','medium']
     '''
-    def __init__(self,class_to_ind=Class_to_ind,levels=['easy','medium','hard']):
+    def __init__(self,class_to_ind=Class_to_ind(True,'Car'),levels=['easy','medium','hard']):
         self.class_to_ind=class_to_ind
         self.levels=levels if isinstance(levels,list) else [levels]
 
