@@ -9,7 +9,7 @@ by Sheng Tao, Qijie Zhao. (VDIG，PKU)
 model | mAP
 ---|---
 ssd300 | 77.27%
-ssd512 | 80.19%
+ssd512 | 79.89%
 
 - KITTI
 
