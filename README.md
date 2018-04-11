@@ -4,7 +4,7 @@ by Sheng Tao, Qijie Zhao. (VDIG，PKU)
 
 #### Reproduced the proposed results.
 
-#### Besides, our proposed upgraded model will be opened soon!
+#### Besides, our proposed upgraded model will be opened soon!(Note that we are not developed from pure SSD)
 - VOC2007
 
 model | mAP
