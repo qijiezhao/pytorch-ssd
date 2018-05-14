@@ -11,9 +11,10 @@ model | mAP
 ---|---
 ssd300 | 77.27%
 ssd512 | 79.89%
-Ours300 | 80.5%
-Ours512 | 82.1%
-
+Ours300-vgg | 80.5%
+Ours512-vgg | 82.1%
+Ours300-resnet101 | 81.7%
+Ours512-resnet101 | 82.7%
 
 
 
@@ -23,7 +24,7 @@ model&Input | mAP
 ---|---
 ssd300,TBA | TBA
 ssd512,TBA | TBA
-Ours300 | 80.2%
+Ours300| 80.2%
 Ours512 | 82.6%
 Ours800 | 86.7%
 
