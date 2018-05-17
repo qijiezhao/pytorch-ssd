@@ -16,6 +16,7 @@ from layers.modules import MultiBoxLoss
 from ssd import build_ssd
 from IPython import embed
 from log import log
+import time
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
