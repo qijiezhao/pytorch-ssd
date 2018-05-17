@@ -1,6 +1,6 @@
 # pytorch-ssd
 
-by Sheng Tao, Qijie Zhao. (VDIG，PKU)
+by Sheng Tao, Qijie Zhao, Feng Ni. (VDIG，PKU)
 
 #### Reproduced the proposed results.
 
@@ -18,6 +18,7 @@ Ours512-resnet101 | 82.7%
 
 
 
+
 - KITTI
 
 model&Input | mAP
@@ -32,7 +33,10 @@ Ours800 | 86.7%
 
 model&Input | mAP(0.5:0.95)
 ---|---
-Ours300|30.1%(TBA)
+Ours300-vgg|30.1%(TBA)
+Ours300-resnet101|32.1%
+Ours300-vgg-muliscale|36.7%
 Ours512|34.8%(TBA)
+(TBA)|(TBA)
 
 **Still being under fixing**.
