@@ -28,6 +28,7 @@ ssd512,TBA | TBA
 Ours300| 80.2%
 Ours512 | 82.6%
 Ours800 | 86.7%
+Ours800-multi-scale| 89.83%
 
 - MS COCO
 
