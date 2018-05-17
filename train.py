@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import torch
 import torch.nn as nn
@@ -7,16 +8,15 @@ import torch.nn.init as init
 import argparse
 from torch.autograd import Variable
 import torch.utils.data as data
-from data import AnnotationTransform, VOCDetection, detection_collate, dataroot, VOC_CLASSES
+from data import AnnotationTransform, VOCDetection, detection_collate, VOCroot, VOC_CLASSES
 from data import KittiLoader, AnnotationTransform_kitti,Class_to_ind
 
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from ssd import build_ssd
-import numpy as np
-import time
 from IPython import embed
 from log import log
+import time
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -38,9 +38,8 @@ parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight dec
 parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
 parser.add_argument('--log_iters', default=True, type=bool, help='Print the loss at each iteration')
 parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
-parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
 parser.add_argument('--save_folder', default='weights/', help='Location to save checkpoint models')
-parser.add_argument('--data_root', default=dataroot, help='Location of VOC root directory')
+parser.add_argument('--data_root', default=VOCroot, help='Location of VOC root directory')
 args = parser.parse_args()
 
 if args.cuda and torch.cuda.is_available():
@@ -54,7 +53,7 @@ if not os.path.exists(args.save_folder):
 train_sets = [('2007', 'trainval'), ('2012', 'trainval')]
 # train_sets = 'train'
 means = (104, 117, 123)  # only support voc now
-if args.dataset=='voc':
+if args.dataset=='VOC':
     num_classes = len(VOC_CLASSES) + 1
 elif args.dataset=='kitti':
     num_classes = 1+1
@@ -109,11 +108,12 @@ optimizer = optim.SGD(net.parameters(), lr=args.lr,
                       momentum=args.momentum, weight_decay=args.weight_decay)
 criterion = MultiBoxLoss(num_classes, args.dim, 0.5, True, 0, True, 3, 0.5, False, args.cuda)
 
-def DatasetSync(dataset='voc',split='training'):
+def DatasetSync(dataset='VOC',split='training'):
 
-    
-    if dataset=='voc':
-        DataRoot=os.path.join(args.data_root,'VOCdevkit')
+
+    if dataset=='VOC':
+        #DataRoot=os.path.join(args.data_root,'VOCdevkit')
+        DataRoot=args.data_root
         dataset = VOCDetection(DataRoot, train_sets, SSDAugmentation(
         args.dim, means), AnnotationTransform())
     elif dataset=='kitti':
@@ -134,7 +134,7 @@ def train():
     # dataset = VOCDetection(args.voc_root, train_sets, SSDAugmentation(
     #     args.dim, means), AnnotationTransform())
     dataset=DatasetSync(dataset=args.dataset,split='training')
-    
+
 
     epoch_size = len(dataset) // args.batch_size
     log.l.info('Training SSD on {}'.format(dataset.name))
@@ -164,7 +164,7 @@ def train():
     batch_iterator = None
     data_loader = data.DataLoader(dataset, args.batch_size, num_workers=args.num_workers,
                                   shuffle=True, collate_fn=detection_collate, pin_memory=True)
-    
+
     lr=args.lr
     for iteration in range(start_iter, args.iterations + 1):
         if (not batch_iterator) or (iteration % epoch_size == 0):
@@ -188,7 +188,7 @@ def train():
 
         # load train data
         images, targets = next(batch_iterator)
-        embed()
+        #embed()
         if args.cuda:
             images = Variable(images.cuda())
             targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
@@ -209,7 +209,7 @@ def train():
         conf_loss += loss_c.data[0]
         if iteration % 10 == 0:
             log.l.info('''
-                Timer: {} sec.\t LR: {}.\t Iter: {}.\t Loss_l: {}.\t Loss_c: {}.
+                Timer: {:.5f} sec.\t LR: {}.\t Iter: {}.\t Loss_l: {:.5f}.\t Loss_c: {:.5f}.
                 '''.format((t1-t0),lr,iteration,loss_l.data[0],loss_c.data[0]))
             if args.visdom and args.send_images_to_visdom:
                 random_batch_index = np.random.randint(images.size(0))
@@ -237,7 +237,7 @@ def train():
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(), args.save_folder + 'ssd_' + str(args.dim) + '.pth')
 
-
+    
 def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_size):
     """Sets the learning rate 
     # Adapted from PyTorch Imagenet example:
@@ -250,6 +250,7 @@ def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_s
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
     return lr
+
 
 if __name__ == '__main__':
     train()
