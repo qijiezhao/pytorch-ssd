@@ -27,8 +27,8 @@ ssd300,TBA | TBA
 ssd512,TBA | TBA
 Ours300| 80.2%
 Ours512 | 82.6%
-Ours800 | 86.7%
-Ours800-multi-scale| 89.83%
+Ours800 | 86.7%(==>up to 87.9%)
+Ours800-multi-scale| 89.83%(==>up to 90.08%)
 
 - MS COCO
 
@@ -36,8 +36,8 @@ model&Input | mAP(0.5:0.95)
 ---|---
 Ours300-vgg|30.1%(TBA)
 Ours300-resnet101|32.1%
-Ours300-vgg-muliscale|36.7%
+Ours300-vgg-multiscale|36.7%
 Ours512|34.8%(TBA)
-(TBA)|(TBA)
+Ours512-vgg-multiscale|39.0%
 
 **Still being under fixing**.
