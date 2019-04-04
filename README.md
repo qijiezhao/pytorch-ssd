@@ -2,6 +2,8 @@
 
 by Qijie Zhao, Feng Ni. (VDIG，PKU)
 
+### We won't update this repo any more, welcome to read&use our recent work: (M2Det)[https://github.com/qijiezhao/M2Det]
+
 #### Reproduced the proposed results.
 
 #### Besides, our proposed upgraded model will be opened soon!(Note that we are not developed from pure SSD)
